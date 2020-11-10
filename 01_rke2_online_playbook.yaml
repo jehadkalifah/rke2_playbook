@@ -62,7 +62,7 @@
       chdir: '{{rke2_offline_folder_path}}'  
     with_items:
       - helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
-      - helm fetch rancher-latest/rancher --version '{{rancher_rancher_file}}'
+      - helm fetch rancher-latest/rancher --version '{{rancher_image_version}}'
       - helm repo add jetstack https://charts.jetstack.io
       - helm repo update
       - helm fetch jetstack/cert-manager --version '{{rancher_cert_manager_ver}}'
