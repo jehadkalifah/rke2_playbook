@@ -1,0 +1,27 @@
+---
+- hosts: rke2_offline[2]
+  become: true
+  vars:
+    rke2_src_config_file_path: ~/rke2_playbook/config_files/third_node_config.yaml
+    rke2_dsc_config_file_path: /etc/rancher/rke2/config.yaml  
+    rke2_src_svc_file_path:  ~/rke2_playbook/config_files/rke2.service
+    rke2_dsc_svc_file_path:  /etc/systemd/system/rke2.service
+    rke2_src_kubectl_file_path: ~/rke2_playbook/config_files/kubectl
+    rke2_dsc_kubectl_file_path: /usr/local/bin/kubectl  
+  tasks:  
+  - name: Copying the rke2 files to the thrid node
+    copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      mode: "{{item.mode}}"
+    with_items:
+      - { src: "{{rke2_src_config_file_path}}", dest: "{{rke2_dsc_config_file_path}}", mode: '0644'}
+      - { src: "{{rke2_src_svc_file_path}}", dest: "{{rke2_dsc_svc_file_path}}", mode: '0644'}
+      - { src: "{{rke2_src_kubectl_file_path}}", dest: "{{rke2_dsc_kubectl_file_path}}", mode: '0755'}
+  - name: Configuring rke2 service
+    command: "{{ item }}"
+    loop:
+      - systemctl daemon-reload
+      - systemctl enable rke2.service
+  - name: Starting rke2 service
+    command: systemctl start rke2.service

@@ -1,0 +1,14 @@
+[Unit]
+Description=Rke2 service
+
+[Service]
+WorkingDirectory=/etc/rancher/rke2/
+ExecStart=/usr/local/bin/rke2 server --config /etc/rancher/rke2/config.yaml
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=rke2
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

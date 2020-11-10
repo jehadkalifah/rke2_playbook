@@ -1,0 +1,37 @@
+---
+- hosts: rke2_image
+  become: true
+  vars:
+    rancher_images_file: $PWD/rke2_playbook/rancher-images.txt
+    rancher_private_registry: 192.168.1.100:5000
+    rke2_offline_folder_path: $PWD/rke2_playbook/ 
+  tasks:  
+  - name: Uploading rancher images to private registry 
+    command: ./rancher-load-images.sh --image-list '{{rancher_images_file}}' --registry '{{rancher_private_registry}}'
+    args:
+        chdir: '{{rke2_offline_folder_path}}'
+
+        
+- hosts: rke2_offline[0]
+  become: true
+  vars:  
+    rke2_offline_folder_path: ~/rke2_playbook/ 
+  tasks:  
+  - name: Deploying cert-manager deployments
+    command: "{{item}}"
+    args:
+      chdir: '{{rke2_offline_folder_path}}'  
+    with_items:
+    - kubectl create namespace cert-manager
+    - kubectl apply -f cert-manager/cert-manager-crd.yaml
+    - kubectl apply -R -f ./cert-manager
+  - name: Waiting 5 mintues to deploy cert-manager
+    pause:
+      minutes: 5  
+  - name: Deploying rancher deployments
+    command: "{{item}}"
+    args:
+      chdir: '{{rke2_offline_folder_path}}'  
+    with_items:
+    - kubectl create namespace cattle-system
+    - kubectl -n cattle-system apply -R -f ./rancher

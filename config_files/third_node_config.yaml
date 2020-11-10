@@ -1,0 +1,15 @@
+tls-san:
+  - "cluster.local"
+  - "192.168.1.50"
+  - "node03"
+data-dir: "/var/lib/rancher/rke2"
+token: "rkesecret" 
+write-kubeconfig: "/root/.kube/config" 
+write-kubeconfig-mode: "0644"   
+node-name: "node03" 
+node-label: 
+  - "nodename=node03" 
+  - "clustername=cluster.local" 
+node-ip: "192.168.1.50" 
+advertise-address: "192.168.1.50"    
+server: "https://192.168.1.30:9345"

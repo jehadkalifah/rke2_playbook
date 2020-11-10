@@ -1,0 +1,12 @@
+docker pull docker.io/rancher/hardened-calico:v3.13.3
+docker pull docker.io/rancher/hardened-coredns:v1.6.9
+docker pull docker.io/rancher/hardened-etcd:v3.4.13-k3s1
+docker pull docker.io/rancher/hardened-flannel:v0.13.0-rancher1
+docker pull docker.io/rancher/hardened-k8s-metrics-server:v0.3.6
+docker pull docker.io/rancher/hardened-kube-proxy:v1.18.10
+docker pull docker.io/rancher/klipper-helm:v0.3.0
+docker pull docker.io/rancher/pause:3.2
+docker pull docker.io/rancher/nginx-ingress-controller-defaultbackend:1.5-rancher1
+docker pull docker.io/rancher/nginx-ingress-controller:nginx-0.30.0-rancher1
+docker pull docker.io/rancher/rke2-runtime:v1.18.10-rke2r1
+docker pull docker.io/rancher/hardened-kubernetes:v1.18.10-rke2r1

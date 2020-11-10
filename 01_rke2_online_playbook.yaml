@@ -1,0 +1,74 @@
+---
+- hosts: rke2_online
+  become: true
+  vars:
+    rke2_src_kubelet_file_path: ~/rke2_playbook/config_files/kubectl_file.tar.gz
+    rke2_dsc_kubelet_file_path: $PWD/rke2_playbook/config_files/  
+    rke2_save_images_script_path: $PWD/rke2_playbook/config_files/rke2_save_images.sh
+    rke2_tar_images_script_path: $PWD/rke2_playbook/config_files/rke2_tar_images.sh
+    rke2_tar_images_folder_path: $PWD/rke2_playbook/rke2_offline_images/
+    rke2_tar_images_compressed_file_name: $PWD/rke2_playbook/rke2_offline_images.tar.gz
+    rke2_binary_file_url: https://github.com/rancher/rke2/releases/download/v1.18.10%2Brke2r1/rke2.linux-amd64
+    rke2_rancher_images_url: https://github.com/rancher/rancher/releases/download/v2.5.1/rancher-images.txt
+    rke2_rancher_save_images_url: https://github.com/rancher/rancher/releases/download/v2.5.1/rancher-save-images.sh
+    rke2_rancher_load_images_url: https://github.com/rancher/rancher/releases/download/v2.5.1/rancher-load-images.sh
+    rke2_offline_folder_path: $PWD/rke2_playbook/ 
+    rancher_save_images_file: ./rancher-save-images.sh
+    rancher_images_file: $PWD/rke2_playbook/rancher-images.txt
+    rancher_cert_manager_ver: v0.12.0
+    rancher_cert_manager_file: $PWD/rke2_playbook/cert-manager-v0.12.0.tgz
+    rancher_cert_manager_namespace: cert-manager
+    rancher_private_registry: 192.168.1.100:5000
+    rancher_rancher_file: $PWD/rke2_playbook/rancher-2.5.1.tgz
+    rancher_namespace: cattle-system
+    rancher_hostname: rancher.cluster.local
+    rancher_image_version: v2.5.1 
+  tasks:
+  - name: Extracting kubectl tar file 
+    unarchive:
+      src: "{{ rke2_src_kubelet_file_path }}"
+      dest: "{{ rke2_dsc_kubelet_file_path }}"  
+  - name: Granting an execution permission to the save images script file
+    file: 
+      path: "{{ rke2_save_images_script_path }}"
+      mode: 0755
+  - name: Downloading rke2 images from docker hub
+    shell: "{{ rke2_save_images_script_path }}"
+  - name: Granting an execution permission to the tar images script file
+    file: 
+      path: "{{ rke2_tar_images_script_path }}"
+      mode: 0755
+  - name: Exporting rke2 images to a tar file
+    shell: "{{ rke2_tar_images_script_path }}"     
+  - name: Compressing the rke2 images folder
+    command: tar -cvzf  "{{ rke2_tar_images_compressed_file_name }}" -C "{{ rke2_tar_images_folder_path }}" . 
+  - name: Downloading required binary files  
+    get_url:
+      url: "{{ item.url }}"
+      dest: "{{ item.dest }}"
+      mode: "{{item.mode}}"
+    with_items:
+      - { url: "{{rke2_binary_file_url}}", dest: "{{rke2_offline_folder_path}}", mode: '0755'}
+      - { url: "{{rke2_rancher_images_url}}", dest: "{{rke2_offline_folder_path}}", mode: '0644'}
+      - { url: "{{rke2_rancher_save_images_url}}", dest: "{{rke2_offline_folder_path}}", mode: '0755'}
+      - { url: "{{rke2_rancher_load_images_url}}", dest: "{{rke2_offline_folder_path}}", mode: '0755'}
+  - name: Downloading Rancher images
+    shell: '{{rancher_save_images_file}}'
+    args:
+      chdir: '{{rke2_offline_folder_path}}'      
+  - name: Preparing a cert-manager helm template
+    command: "{{item}}"
+    args:
+      chdir: '{{rke2_offline_folder_path}}'  
+    with_items:
+      - helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+      - helm fetch rancher-latest/rancher
+      - helm repo add jetstack https://charts.jetstack.io
+      - helm repo update
+      - helm fetch jetstack/cert-manager --version '{{rancher_cert_manager_ver}}'
+      - helm template cert-manager '{{rancher_cert_manager_file}}' --output-dir '{{rke2_offline_folder_path}}' --namespace '{{rancher_cert_manager_namespace}}' --set image.repository='{{rancher_private_registry}}'/quay.io/jetstack/cert-manager-controller --set webhook.image.repository='{{rancher_private_registry}}'/quay.io/jetstack/cert-manager-webhook --set cainjector.image.repository='{{rancher_private_registry}}'/quay.io/jetstack/cert-manager-cainjector
+      - curl -L -o '{{rke2_offline_folder_path}}'/cert-manager/cert-manager-crd.yaml https://raw.githubusercontent.com/jetstack/cert-manager/release-0.12/deploy/manifests/00-crds.yaml
+  - name: Preparing a rancher helm template
+    command: helm template rancher '{{rancher_rancher_file}}' --output-dir '{{rke2_offline_folder_path}}' --namespace '{{rancher_namespace}}' --set hostname='{{rancher_hostname}}' --set rancherImageTag='{{rancher_image_version}}' --set certmanager.version='{{rancher_cert_manager_ver}}' --set rancherImage='{{rancher_private_registry}}'/rancher/rancher --set systemDefaultRegistry='{{rancher_private_registry}}' --set useBundledSystemChart=true
+    args:
+      chdir: '{{rke2_offline_folder_path}}'  
